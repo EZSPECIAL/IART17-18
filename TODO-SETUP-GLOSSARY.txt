@@ -1,0 +1,24 @@
+JDK 8+
+Intellij IDEA 2018.1.3 (Community)
+To import to Intellij IDEA: File -> Open -> build.gradle -> click OK
+Ctrl+Shift+Alt+S to setup JDK for the project
+Right click DesktopLauncher and select run
+Edit configuration under Run -> Edit configuration to set the working directory for the DesktopLauncher configuration. It should point to core/assets
+
+TODO
+
+  - separate into arrays (boxes, player, walls)
+  - store map width/height for easier possible moves calc
+  - create sprites for arrays
+  - render dynamic map
+  - test changing positions
+  - button for running algo / changing map
+  - do the actual work you $%&%$
+
+GLOSSARY
+
+map             the Tiled map to use
+camera          the camera to use
+batch           the sprite batch to use
+filepath        the file path to use
+astar           the main class instance
