@@ -35,4 +35,26 @@ public class DebugPrint {
 
         System.out.println(print);
     }
+
+    /**
+     * Prints a 2D vector for debugging.
+     *
+     * @param title the title of this list
+     * @param vector the vector to print
+     */
+    public void printVector(String title, Vector2 vector) {
+
+        System.out.println(title + ": " + vector.x + "," + vector.y);
+    }
+
+    // TODO doc
+    public void printFlags(String title, ArrayList<Boolean> booleans) {
+
+        String print = title + ": ";
+        for(Boolean bool : booleans) {
+            print += bool + " ";
+        }
+
+        System.out.println(print);
+    }
 }

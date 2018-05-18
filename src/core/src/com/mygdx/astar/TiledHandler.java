@@ -2,6 +2,7 @@ package com.mygdx.astar;
 
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
@@ -39,15 +40,15 @@ public class TiledHandler {
     }
 
     /**
-     * Cycles through a Tiled map and finds all the goals to build a list of their coordinates.
+     * Cycles through a Tiled map and finds all the entities asked for to build a list of their coordinates.
      *
-     * @param map the Tiled map to use
-     * @return the list of coordinates of each goal in the map
+     * @param layer the Tiled map layer to use for the search
+     * @param type the entity to look for
+     * @return the list of coordinates for this entity
      */
-    public ArrayList<Vector2> getGoals(TiledMap map) {
+    public ArrayList<Vector2> getEntities(TiledMapTileLayer layer, String type) {
 
-        ArrayList<Vector2> goals = new ArrayList<Vector2>();
-        TiledMapTileLayer layer = (TiledMapTileLayer) map.getLayers().get(AStar.goalLayer);
+        ArrayList<Vector2> list = new ArrayList<Vector2>();
 
         int height = layer.getHeight();
         int width = layer.getWidth();
@@ -58,8 +59,8 @@ public class TiledHandler {
 
                 // Tile might not exist since layers have null tiles
                 try {
-                    if(layer.getCell(x, y).getTile().getProperties().get("name", String.class).equals(AStar.goalType)) {
-                        goals.add(new Vector2(x, y));
+                    if(layer.getCell(x, y).getTile().getProperties().get("name", String.class).equals(type)) {
+                        list.add(new Vector2(x, y));
                     }
                 } catch (NullPointerException e) {
                     continue;
@@ -67,11 +68,11 @@ public class TiledHandler {
             }
         }
 
-        return goals;
+        return list;
     }
 
     /**
-     * Draws a Tiled map to screen.
+     * Draws a Tiled map's base layer to screen.
      *
      * @param map the Tiled map to use
      * @param camera the camera to use
@@ -80,7 +81,25 @@ public class TiledHandler {
     public void drawTileMap(TiledMap map, OrthographicCamera camera, SpriteBatch batch) {
 
         OrthogonalTiledMapRenderer renderer = new OrthogonalTiledMapRenderer(map, batch);
+        int[] baseLayer = {AStar.baseLayerI};
+
         renderer.setView(camera);
-        renderer.render();
+        renderer.render(baseLayer);
+    }
+
+    /**
+     * Draws the specified texture to each of the 2D vector positions specified
+     * in the coords ArrayList.
+     *
+     * @param coords the coordinates to use
+     * @param tex the texture to use
+     */
+    public void drawEntities(ArrayList<Vector2> coords, Texture tex) {
+
+        SpriteBatch batch = astar.getBatch();
+
+        for(Vector2 vec : coords) {
+            batch.draw(tex, vec.x * AStar.tileSize, vec.y * AStar.tileSize);
+        }
     }
 }

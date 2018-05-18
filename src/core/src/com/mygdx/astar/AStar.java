@@ -5,12 +5,15 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DefaultUndirectedWeightedGraph;
 
 import java.util.ArrayList;
 
@@ -19,17 +22,23 @@ public class AStar extends ApplicationAdapter {
     static final boolean debugFlag = true;
 
     // Enumerators
-    private enum PukoState {LOAD_MAP, RENDER}
+    private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
 
     // Level loading constants
     private static final String mapPrefix = "Level";
     private static final String mapFileType = "tmx";
+
+    // Texture names
+    private static final String playerTexName = "player.png";
+    private static final String boxTexName = "box.png";
+    private static final String goalTexName = "goal.png";
 
     // Tiled map layers
     static final String baseLayer = "Base";
     static final String boxLayer = "Boxes";
     static final String goalLayer = "Goals";
     static final String playerLayer = "Player";
+    static final int baseLayerI = 0;
 
     // Tiled tile set types
     static final String boxType = "box";
@@ -38,7 +47,7 @@ public class AStar extends ApplicationAdapter {
     static final String wallType = "wall";
 
     // Level handling constants
-    private static final int tileSize = 60;
+    public static final int tileSize = 60;
     private static final float pixelToMeter = 1.0f / tileSize;
     private static float viewportWidth = 40;
     private static float viewportHeight = 22.5f;
@@ -48,10 +57,14 @@ public class AStar extends ApplicationAdapter {
     private Viewport viewport;
     private SpriteBatch batch;
     private AssetManager assetManager;
+    private Texture goalTex;
+    private Texture boxTex;
+    private Texture playerTex;
 
     // Tiled  properties
     private TiledMap currentMap;
     private String currentMapName = "";
+    private Vector2 tileMapSize;
     private TiledHandler tiledHandler;
 
     // Entity properties
@@ -63,6 +76,9 @@ public class AStar extends ApplicationAdapter {
     // State properties
     private PukoState state = PukoState.LOAD_MAP;
 
+    // A* properties
+    private DefaultUndirectedWeightedGraph<MyVertex, DefaultEdge> graph = new DefaultUndirectedWeightedGraph<MyVertex, DefaultEdge>(DefaultEdge.class);
+
 	@Override
 	public void create() {
 
@@ -70,6 +86,7 @@ public class AStar extends ApplicationAdapter {
 		this.assetManager = new AssetManager();
 		this.tiledHandler = new TiledHandler(this);
 
+		this.loadTextures();
         this.changeMap(1);
 
         camera = createCamera();
@@ -82,12 +99,33 @@ public class AStar extends ApplicationAdapter {
 
 	    switch(this.state) {
 
+	        // Loading map
             case LOAD_MAP:
-                this.goals = this.tiledHandler.getGoals(this.currentMap);
+
+                this.goals = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.goalLayer), AStar.goalType);
+                this.boxes = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.boxLayer), AStar.boxType);
+                this.walls = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.baseLayer), AStar.wallType);
+                this.player = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.playerLayer), AStar.playerType).get(0).cpy(); // TODO static final
+
                 if(AStar.debugFlag) DebugPrint.getInstance().printVectorList("Goals", this.goals);
+                if(AStar.debugFlag) DebugPrint.getInstance().printVectorList("Boxes", this.boxes);
+                if(AStar.debugFlag) DebugPrint.getInstance().printVectorList("Walls", this.walls);
+                if(AStar.debugFlag) DebugPrint.getInstance().printVector("Player", this.player);
+                this.state = PukoState.RUN_ALGO;
+                break;
+
+            // Running A*
+            case RUN_ALGO:
+
+                MyVertex testVert = new MyVertex(this.boxes, this.player);
+                this.graph.addVertex(testVert);
+
+
+                this.calcPossibleMoves(testVert);
                 this.state = PukoState.RENDER;
                 break;
 
+            // Rendering solution
             case RENDER:
 
                 this.batch.setProjectionMatrix(camera.combined);
@@ -96,14 +134,19 @@ public class AStar extends ApplicationAdapter {
                 Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT );
 
                 this.tiledHandler.drawTileMap(this.currentMap, this.camera, this.batch);
+
+                // Draw dynamic entities
+                this.batch.begin();
+                this.tiledHandler.drawEntities(this.goals, this.goalTex);
+
+                ArrayList<Vector2> player = new ArrayList<Vector2>();
+                player.add(this.player);
+                this.tiledHandler.drawEntities(player, this.playerTex);
+                this.tiledHandler.drawEntities(this.boxes, this.boxTex);
+                this.batch.end();
+
                 break;
         }
-
-//		Gdx.gl.glClearColor(1, 0, 0, 1);
-//		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-//		batch.begin();
-//		batch.draw(img, 0, 0);
-//		batch.end();
 	}
 	
 	@Override
@@ -111,6 +154,9 @@ public class AStar extends ApplicationAdapter {
 
 		this.batch.dispose();
 		this.assetManager.dispose();
+		this.playerTex.dispose();
+		this.boxTex.dispose();
+		this.goalTex.dispose();
 		if(this.currentMap != null) this.currentMap.dispose();
 	}
 
@@ -125,11 +171,65 @@ public class AStar extends ApplicationAdapter {
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);
+
+        this.tileMapSize = new Vector2(layer.getWidth(), layer.getHeight());
         viewportWidth = layer.getWidth();
         viewportHeight = layer.getHeight();
 
         this.camera = createCamera();
         viewport = new FitViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), camera);
+    }
+
+    // TODO doc
+    private void calcPossibleMoves(MyVertex start) {
+
+	    Vector2 moveRight = new Vector2(this.player.x + 1, this.player.y);
+        Vector2 moveLeft = new Vector2(this.player.x - 1, this.player.y);
+        Vector2 moveUp = new Vector2(this.player.x, this.player.y + 1);
+        Vector2 moveDown = new Vector2(this.player.x, this.player.y - 1);
+
+        boolean validRight = this.boundsCheck(moveRight);
+        boolean validLeft = this.boundsCheck(moveLeft);
+        boolean validUp = this.boundsCheck(moveUp);
+        boolean validDown = this.boundsCheck(moveDown);
+
+        ArrayList<Boolean> bools = new ArrayList<Boolean>();
+        bools.add(validRight);
+        bools.add(validLeft);
+        bools.add(validUp);
+        bools.add(validDown);
+        DebugPrint.getInstance().printFlags("MoveFlags", bools);
+
+
+    }
+
+    // TODO doc
+    private boolean boundsCheck(Vector2 coords) {
+
+	    if(coords.x < 0 || coords.y < 0) {
+	        return false;
+        } else if(coords.x > this.tileMapSize.x - 1 || coords.y > this.tileMapSize.y - 1) {
+	        return false;
+        } else if(this.walls.contains(coords)) {
+	        return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Loads the textures needed for drawing the game.
+     */
+    private void loadTextures() {
+
+	    this.assetManager.load(AStar.goalTexName, Texture.class);
+	    this.assetManager.load(AStar.boxTexName, Texture.class);
+	    this.assetManager.load(AStar.playerTexName, Texture.class);
+	    this.assetManager.finishLoading();
+
+	    this.goalTex = this.assetManager.get(AStar.goalTexName);
+	    this.boxTex = this.assetManager.get(AStar.boxTexName);
+	    this.playerTex = this.assetManager.get(AStar.playerTexName);
     }
 
     /**
@@ -154,9 +254,9 @@ public class AStar extends ApplicationAdapter {
     }
 
     /**
-     * @return the current Tiled map
+     * @return the sprite batch for this game
      */
-    public TiledMap getCurrentMap() {
-	    return this.currentMap;
+    public SpriteBatch getBatch() {
+	    return this.batch;
     }
 }

@@ -22,3 +22,5 @@ camera          the camera to use
 batch           the sprite batch to use
 filepath        the file path to use
 astar           the main class instance
+tex             the texture to use
+coords          the coordinates to use
