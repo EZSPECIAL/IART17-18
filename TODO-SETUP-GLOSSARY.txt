@@ -7,10 +7,10 @@ Edit configuration under Run -> Edit configuration to set the working directory 
 
 TODO
 
-  - compute heuristic cost (no turns)
   - A*
   - compute heuristic with turns
   - button for running algo / changing map
+  - run time statistics
 
 GLOSSARY
 

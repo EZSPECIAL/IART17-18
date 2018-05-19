@@ -119,9 +119,10 @@ public class AStar extends ApplicationAdapter {
             case RUN_ALGO:
 
                 // TODO A*
-                MyVertex testVert = new MyVertex(this.boxes, this.player);
-                this.graph.addVertex(testVert);
+                MyVertex testVert = new MyVertex(this, this.boxes, this.player);
                 ArrayList<MyVertex> verts = this.calcPossibleMoves(testVert);
+
+                testVert.computeHeuristic();
 
                 for(MyVertex vert : verts) {
                     DebugPrint.getInstance().printVertex(vert);
@@ -176,10 +177,10 @@ public class AStar extends ApplicationAdapter {
 	    if(!this.currentMapName.equals("")) this.assetManager.unload(this.currentMapName);
 
 	    String filepath = mapPrefix + mapID + "." + mapFileType;
-        // this.tiledHandler.loadMap(filepath);
-        this.tiledHandler.loadMap("LevelB.tmx");
-        // this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
-        this.currentMap = this.assetManager.get("LevelB.tmx");
+        this.tiledHandler.loadMap(filepath);
+        //this.tiledHandler.loadMap("LevelA.tmx");
+        this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
+        //this.currentMap = this.assetManager.get("LevelA.tmx");
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);
@@ -217,7 +218,7 @@ public class AStar extends ApplicationAdapter {
         boolean validDown = !this.collisionCheck(moveDown);
 
         Boolean[] bools = {validRight, validLeft, validUp, validDown};
-        DebugPrint.getInstance().printFlags("MoveFlags", bools);
+        if(AStar.debugFlag) DebugPrint.getInstance().printFlags("MoveFlags", bools);
 
         // Simulate all board states for every player direction possible from starting state
         if(validRight) {
@@ -300,16 +301,16 @@ public class AStar extends ApplicationAdapter {
 	    switch(this.simulatePlayerMove(vert, pCoords, direction)) {
 
             case PUSH:
-                verts.add(new MyVertex(this.moveBoxes(vert, pCoords, direction, false), pCoords));
+                verts.add(new MyVertex(this, this.moveBoxes(vert, pCoords, direction, false), pCoords));
                 break;
 
             case PULL:
-                verts.add(new MyVertex(this.moveBoxes(vert, pCoords, direction, true), pCoords));
-                verts.add(new MyVertex(vert.getBoxes(), pCoords));
+                verts.add(new MyVertex(this, this.moveBoxes(vert, pCoords, direction, true), pCoords));
+                verts.add(new MyVertex(this, vert.getBoxes(), pCoords));
                 break;
 
             case FREE_SPACE:
-                verts.add(new MyVertex(vert.getBoxes(), pCoords));
+                verts.add(new MyVertex(this, vert.getBoxes(), pCoords));
                 break;
 
             default:
@@ -378,7 +379,7 @@ public class AStar extends ApplicationAdapter {
      * @param coords the coordinates to use
      * @return whether collision happened
      */
-    private boolean collisionCheck(Vector2 coords) {
+    public boolean collisionCheck(Vector2 coords) {
 
 	    if(coords.x < 0 || coords.y < 0) {
 	        return true;
@@ -432,5 +433,12 @@ public class AStar extends ApplicationAdapter {
      */
     public SpriteBatch getBatch() {
 	    return this.batch;
+    }
+
+    /**
+     * @return the list of coordinates of each goal for this game
+     */
+    public ArrayList<Vector2> getGoals() {
+        return this.goals;
     }
 }

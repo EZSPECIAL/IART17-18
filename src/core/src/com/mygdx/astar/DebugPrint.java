@@ -80,4 +80,14 @@ public class DebugPrint {
 
         System.out.println("\tboxes: " + print);
     }
+
+    /**
+     * Prints a numeric value.
+     *
+     * @param title the title of this print
+     * @param value the value to print
+     */
+    public void printInt(String title, int value) {
+        System.out.println(title + ": " + value);
+    }
 }
