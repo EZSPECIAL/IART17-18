@@ -23,7 +23,7 @@ public class DebugPrint {
     /**
      * Prints a list of coordinates for debugging.
      *
-     * @param title the title of this list
+     * @param title the title of this print
      * @param list the list to print
      */
     public void printVectorList(String title, ArrayList<Vector2> list) {
@@ -39,16 +39,21 @@ public class DebugPrint {
     /**
      * Prints a 2D vector for debugging.
      *
-     * @param title the title of this list
+     * @param title the title of this print
      * @param vector the vector to print
      */
     public void printVector(String title, Vector2 vector) {
 
-        System.out.println(title + ": " + vector.x + "," + vector.y);
+        System.out.println(title + ": " + "(" + vector.x + "," + vector.y + ")");
     }
 
-    // TODO doc
-    public void printFlags(String title, ArrayList<Boolean> booleans) {
+    /**
+     * Prints an array of boolean values.
+     *
+     * @param title title the title of this print
+     * @param booleans the boolean array to print
+     */
+    public void printFlags(String title, Boolean[] booleans) {
 
         String print = title + ": ";
         for(Boolean bool : booleans) {
@@ -56,5 +61,23 @@ public class DebugPrint {
         }
 
         System.out.println(print);
+    }
+
+    /**
+     * Prints vertex info by printing its box coordinates and player coordinates.
+     *
+     * @param vert the vertex to print
+     */
+    public void printVertex(MyVertex vert) {
+
+        System.out.println("Vertex");
+        System.out.println("\tplayer: " + "(" + vert.getPlayer().x + "," + vert.getPlayer().y + ")");
+
+        String print = "";
+        for(Vector2 box : vert.getBoxes()) {
+            print += "(" + box.x + "," + box.y + ")";
+        }
+
+        System.out.println("\tboxes: " + print);
     }
 }

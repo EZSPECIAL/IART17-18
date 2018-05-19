@@ -9,8 +9,16 @@ public class MyVertex {
     private ArrayList<Vector2> boxes;
     private Vector2 player;
     private int heuristicCost;
+    private int depth; // TODO remove?
 
-    public MyVertex(ArrayList<Vector2> boxes, Vector2 player) {
+    /**
+     * Constructs a MyVertex object which stores the Pukoban board state by
+     * copying all the box and player coordinates received.
+     *
+     * @param boxes the the list of box coordinates
+     * @param pCoords the player coordinates
+     */
+    public MyVertex(ArrayList<Vector2> boxes, Vector2 pCoords) {
 
         this.boxes = new ArrayList<Vector2>();
 
@@ -20,6 +28,20 @@ public class MyVertex {
         }
 
         // Clone player coords
-        this.player = player.cpy();
+        this.player = pCoords.cpy();
+    }
+
+    /**
+     * @return the list of boxes for this Pukoban board state
+     */
+    public ArrayList<Vector2> getBoxes() {
+        return this.boxes;
+    }
+
+    /**
+     * @return the player coordinates for this Pukoban board state
+     */
+    public Vector2 getPlayer() {
+        return this.player;
     }
 }

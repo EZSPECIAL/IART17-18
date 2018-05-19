@@ -7,13 +7,10 @@ Edit configuration under Run -> Edit configuration to set the working directory 
 
 TODO
 
-  - separate into arrays (boxes, player, walls)
-  - store map width/height for easier possible moves calc
-  - create sprites for arrays
-  - render dynamic map
-  - test changing positions
+  - compute heuristic cost (no turns)
+  - A*
+  - compute heuristic with turns
   - button for running algo / changing map
-  - do the actual work you $%&%$
 
 GLOSSARY
 
@@ -24,3 +21,8 @@ filepath        the file path to use
 astar           the main class instance
 tex             the texture to use
 coords          the coordinates to use
+mapID           the numeric map ID to use
+vert            the vertex to use as starting point
+pCoords         the player coordinates after simulating movement
+direction       the direction used to simulate movement
+title           the title of this print

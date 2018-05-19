@@ -19,10 +19,11 @@ import java.util.ArrayList;
 
 public class AStar extends ApplicationAdapter {
 
-    static final boolean debugFlag = true;
+    static final boolean debugFlag = true; // TODO turn this off!
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
+    private enum PlayerBoxCol {NO_MOVE, PUSH, PULL, FREE_SPACE}
 
     // Level loading constants
     private static final String mapPrefix = "Level";
@@ -105,7 +106,7 @@ public class AStar extends ApplicationAdapter {
                 this.goals = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.goalLayer), AStar.goalType);
                 this.boxes = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.boxLayer), AStar.boxType);
                 this.walls = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.baseLayer), AStar.wallType);
-                this.player = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.playerLayer), AStar.playerType).get(0).cpy(); // TODO static final
+                this.player = this.tiledHandler.getEntities((TiledMapTileLayer) this.currentMap.getLayers().get(AStar.playerLayer), AStar.playerType).get(0).cpy();
 
                 if(AStar.debugFlag) DebugPrint.getInstance().printVectorList("Goals", this.goals);
                 if(AStar.debugFlag) DebugPrint.getInstance().printVectorList("Boxes", this.boxes);
@@ -117,11 +118,15 @@ public class AStar extends ApplicationAdapter {
             // Running A*
             case RUN_ALGO:
 
+                // TODO A*
                 MyVertex testVert = new MyVertex(this.boxes, this.player);
                 this.graph.addVertex(testVert);
+                ArrayList<MyVertex> verts = this.calcPossibleMoves(testVert);
 
+                for(MyVertex vert : verts) {
+                    DebugPrint.getInstance().printVertex(vert);
+                }
 
-                this.calcPossibleMoves(testVert);
                 this.state = PukoState.RENDER;
                 break;
 
@@ -160,19 +165,28 @@ public class AStar extends ApplicationAdapter {
 		if(this.currentMap != null) this.currentMap.dispose();
 	}
 
-	// TODO doc
+    /**
+     * Changes the current map by loading a new Tiled map. Sets the map size properties,
+     * the camera and viewport according to the new map.
+     *
+     * @param mapID the numeric map ID to use
+     */
     private void changeMap(int mapID) {
 
 	    if(!this.currentMapName.equals("")) this.assetManager.unload(this.currentMapName);
 
 	    String filepath = mapPrefix + mapID + "." + mapFileType;
-        this.tiledHandler.loadMap(filepath);
-        this.currentMap = this.assetManager.get(filepath);
+        // this.tiledHandler.loadMap(filepath);
+        this.tiledHandler.loadMap("LevelB.tmx");
+        // this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
+        this.currentMap = this.assetManager.get("LevelB.tmx");
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);
 
         this.tileMapSize = new Vector2(layer.getWidth(), layer.getHeight());
+        if(AStar.debugFlag) DebugPrint.getInstance().printVector("Map size", this.tileMapSize);
+
         viewportWidth = layer.getWidth();
         viewportHeight = layer.getHeight();
 
@@ -180,41 +194,201 @@ public class AStar extends ApplicationAdapter {
         viewport = new FitViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), camera);
     }
 
-    // TODO doc
-    private void calcPossibleMoves(MyVertex start) {
+    /**
+     * Computes the possible vertices to reach from the given starting vertex using Pukoban rules.
+     *
+     * @param vert the vertex to use as starting point
+     * @return the list of vertices possible from the given starting vertex
+     */
+    private ArrayList<MyVertex> calcPossibleMoves(MyVertex vert) {
 
-	    Vector2 moveRight = new Vector2(this.player.x + 1, this.player.y);
-        Vector2 moveLeft = new Vector2(this.player.x - 1, this.player.y);
-        Vector2 moveUp = new Vector2(this.player.x, this.player.y + 1);
-        Vector2 moveDown = new Vector2(this.player.x, this.player.y - 1);
+	    ArrayList<MyVertex> moves = new ArrayList<MyVertex>();
+	    Vector2 pCoords = vert.getPlayer();
 
-        boolean validRight = this.boundsCheck(moveRight);
-        boolean validLeft = this.boundsCheck(moveLeft);
-        boolean validUp = this.boundsCheck(moveUp);
-        boolean validDown = this.boundsCheck(moveDown);
+	    Vector2 moveRight = new Vector2(pCoords.x + 1, pCoords.y);
+        Vector2 moveLeft = new Vector2(pCoords.x - 1, pCoords.y);
+        Vector2 moveUp = new Vector2(pCoords.x, pCoords.y + 1);
+        Vector2 moveDown = new Vector2(pCoords.x, pCoords.y - 1);
 
-        ArrayList<Boolean> bools = new ArrayList<Boolean>();
-        bools.add(validRight);
-        bools.add(validLeft);
-        bools.add(validUp);
-        bools.add(validDown);
+        // Check possible directions for Player, disregards boxes
+        boolean validRight = !this.collisionCheck(moveRight);
+        boolean validLeft = !this.collisionCheck(moveLeft);
+        boolean validUp = !this.collisionCheck(moveUp);
+        boolean validDown = !this.collisionCheck(moveDown);
+
+        Boolean[] bools = {validRight, validLeft, validUp, validDown};
         DebugPrint.getInstance().printFlags("MoveFlags", bools);
 
-
-    }
-
-    // TODO doc
-    private boolean boundsCheck(Vector2 coords) {
-
-	    if(coords.x < 0 || coords.y < 0) {
-	        return false;
-        } else if(coords.x > this.tileMapSize.x - 1 || coords.y > this.tileMapSize.y - 1) {
-	        return false;
-        } else if(this.walls.contains(coords)) {
-	        return false;
+        // Simulate all board states for every player direction possible from starting state
+        if(validRight) {
+            moves.addAll(this.simulatePukobanState(vert, moveRight, new Vector2(1, 0)));
         }
 
-        return true;
+        if(validLeft) {
+            moves.addAll(this.simulatePukobanState(vert, moveLeft, new Vector2(-1, 0)));
+        }
+
+        if(validUp) {
+            moves.addAll(this.simulatePukobanState(vert, moveUp, new Vector2(0, 1)));
+        }
+
+        if(validDown) {
+            moves.addAll(this.simulatePukobanState(vert, moveDown, new Vector2(0, -1)));
+        }
+
+        return moves;
+    }
+
+    /**
+     * Computes the new box positions using the player coordinates and the player movement direction.
+     * Takes in consideration whether the box movement is a pull or a push.
+     *
+     * @param vert the vertex to use as starting point
+     * @param pCoords the player coordinates after simulating movement
+     * @param direction the direction used to simulate movement
+     * @param isPull whether the move is a pull or a push
+     * @return the list with the new box positions
+     */
+    private ArrayList<Vector2> moveBoxes(MyVertex vert, Vector2 pCoords, Vector2 direction, boolean isPull) {
+
+        ArrayList<Vector2> boxes = vert.getBoxes();
+        ArrayList<Vector2> tempBoxes = new ArrayList<Vector2>();
+
+        for (Vector2 box : boxes) {
+            tempBoxes.add(new Vector2(box.x, box.y));
+        }
+
+        // Pulling box
+        if(isPull) {
+
+            Vector2 oppositeDir = new Vector2(direction.x * -1, direction.y * -1);
+            Vector2 pullBox = pCoords.cpy();
+            pullBox = pullBox.add(oppositeDir).add(oppositeDir);
+
+            int index = tempBoxes.indexOf(pullBox);
+            Vector2 newBox = tempBoxes.get(index);
+
+            newBox = newBox.add(direction);
+            tempBoxes.set(index, newBox);
+
+        // Pushing box
+        } else {
+
+            int index = tempBoxes.indexOf(pCoords);
+            Vector2 newBox = tempBoxes.get(index);
+
+            newBox = newBox.add(direction);
+            tempBoxes.set(index, newBox);
+        }
+
+        return tempBoxes;
+    }
+
+    /**
+     * Simulates the effect of player movement on the map boxes. Returns the new board state
+     * created by that movement, if any.
+     *
+     * @param vert the vertex to use as starting point
+     * @param pCoords the player coordinates after simulating movement
+     * @param direction the direction used to simulate movement
+     * @return the possible board states created by this movement
+     */
+    private ArrayList<MyVertex> simulatePukobanState(MyVertex vert, Vector2 pCoords, Vector2 direction) {
+
+	    ArrayList<MyVertex> verts = new ArrayList<MyVertex>();
+
+	    switch(this.simulatePlayerMove(vert, pCoords, direction)) {
+
+            case PUSH:
+                verts.add(new MyVertex(this.moveBoxes(vert, pCoords, direction, false), pCoords));
+                break;
+
+            case PULL:
+                verts.add(new MyVertex(this.moveBoxes(vert, pCoords, direction, true), pCoords));
+                verts.add(new MyVertex(vert.getBoxes(), pCoords));
+                break;
+
+            case FREE_SPACE:
+                verts.add(new MyVertex(vert.getBoxes(), pCoords));
+                break;
+
+            default:
+                break;
+        }
+
+        return verts;
+    }
+
+    /**
+     * Simulates the effects of player movement on the map boxes. Checks whether the movement
+     * can be a push or pull, and also if the movement isn't possible due to box collision.
+     *
+     * @param vert the vertex to use as starting point
+     * @param pCoords the player coordinates after simulating movement
+     * @param direction the direction used to simulate movement
+     * @return the enumerator describing the type of movement that occurred
+     */
+    private PlayerBoxCol simulatePlayerMove(MyVertex vert, Vector2 pCoords, Vector2 direction) {
+
+	    ArrayList<Vector2> boxes = vert.getBoxes();
+
+        // Player/Box collision
+        int index = boxes.indexOf(pCoords);
+
+        // Box is pushed
+        if(index != -1) {
+
+            Vector2 boxCoords = boxes.get(index).cpy();
+            boxCoords = boxCoords.add(direction);
+
+            // Box can move
+            if(!this.collisionCheck(boxCoords) && !this.boxCollision(boxes, boxCoords)) {
+                return PlayerBoxCol.PUSH;
+            } else return PlayerBoxCol.NO_MOVE;
+
+        // Free space, might pull or not
+        } else {
+
+            Vector2 oppositeDir = new Vector2(direction.x * -1, direction.y * -1);
+            Vector2 checkForBox = pCoords.cpy();
+            checkForBox = checkForBox.add(oppositeDir).add(oppositeDir);
+
+            // Box to the opposite side of player
+            if(boxes.contains(checkForBox)) {
+                return PlayerBoxCol.PULL;
+            // No boxes for pushing/pulling
+            } else return PlayerBoxCol.FREE_SPACE;
+        }
+    }
+
+    /**
+     * Checks whether the given coordinates collide with the existing box coordinates.
+     *
+     * @param boxes the list of box coordinates to check
+     * @param coords the coordinates to use
+     * @return whether collision happened
+     */
+    private boolean boxCollision(ArrayList<Vector2> boxes, Vector2 coords) {
+	    return boxes.contains(coords);
+    }
+
+    /**
+     * Checks for map boundary collision and wall collisions using the given coordinates.
+     *
+     * @param coords the coordinates to use
+     * @return whether collision happened
+     */
+    private boolean collisionCheck(Vector2 coords) {
+
+	    if(coords.x < 0 || coords.y < 0) {
+	        return true;
+        } else if(coords.x > this.tileMapSize.x - 1 || coords.y > this.tileMapSize.y - 1) {
+	        return true;
+        } else if(this.walls.contains(coords)) {
+	        return true;
+        }
+
+        return false;
     }
 
     /**
