@@ -5,12 +5,14 @@ import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-public class MyVertex {
+public class MyVertex implements Comparable {
 
     // Vertex Pukoban state
     private ArrayList<Vector2> boxes;
     private Vector2 player;
-    private int depth; // TODO remove?
+
+    // Parent vertex
+    private MyVertex parent;
 
     private AStar astar;
 
@@ -20,6 +22,8 @@ public class MyVertex {
     private HashSet<Vector2> expansionCoords;
     private Expansion finalExpansion;
     private int heuristicCost;
+    private int gCost;
+    private int fCost;
 
     /**
      * Constructs a MyVertex object which stores the Pukoban board state by
@@ -59,9 +63,58 @@ public class MyVertex {
         return this.player;
     }
 
+    /**
+     * @return the current heuristic cost
+     */
+    public int getHeuristicCost() {
+        return this.heuristicCost;
+    }
+
+    /**
+     * @return the total cost for this vertex
+     */
+    public int getfCost() {
+        return this.fCost;
+    }
+
+    /**
+     * @return the cost to reach this vertex from the starting vertex
+     */
+    public int getgCost() {
+        return this.gCost;
+    }
+
+    /**
+     * @return the parent vertex of this vertex
+     */
+    public MyVertex getParent() {
+        return this.parent;
+    }
+
+    /**
+     * @param fCost the cost to set
+     */
+    public void setfCost(int fCost) {
+        this.fCost = fCost;
+    }
+
+    /**
+     * @param gCost the cost to set
+     */
+    public void setgCost(int gCost) {
+        this.gCost = gCost;
+    }
+
+    /**
+     * @param parent the parent vertex to set
+     */
+    public void setParent(MyVertex parent) {
+        this.parent = parent;
+    }
+
     // TODO add turns / edit javadoc
     /**
-     * Computes the heuristic cost for this Vertex and stores it.
+     * Computes the heuristic cost for this vertex and stores it.
      * The heuristic is the sum of the shortest distance to a box for each goal.
      */
     public void computeHeuristic() {
@@ -149,6 +202,23 @@ public class MyVertex {
         }
     }
 
+    /**
+     * @return whether all the boxes coincide with all the goals
+     */
+    public boolean checkGoal() {
+        return this.boxes.containsAll(this.astar.getGoals());
+    }
+
+    /**
+     * Computes f() = g() + h().
+     *
+     * @return the f() cost
+     */
+    public int computeFCost() {
+        this.fCost = this.gCost + this.heuristicCost;
+        return this.fCost;
+    }
+
     @Override
     public boolean equals(Object obj) {
 
@@ -163,11 +233,8 @@ public class MyVertex {
             // Check same number of boxes
             if(this.boxes.size() != vertex.boxes.size()) return false;
 
-            // TODO order should not matter?
             // Check that every box coincides
-            for(int i = 0; i < this.boxes.size(); i++) {
-                if(!this.boxes.get(i).equals(vertex.boxes.get(i))) return false;
-            }
+            if(!this.boxes.containsAll(vertex.boxes)) return false;
 
             return true;
         }
@@ -175,7 +242,6 @@ public class MyVertex {
         return false;
     }
 
-    // TODO improve?
     @Override
     public int hashCode() {
 
@@ -184,6 +250,33 @@ public class MyVertex {
             result += box.x + box.y;
         }
 
+        result += this.player.x + this.player.y;
+
         return result;
     }
+
+    @Override
+    public int compareTo(Object o) {
+
+        MyVertex vert = (MyVertex) o;
+
+        if(this.fCost > vert.fCost) {
+            return 1;
+        } else if(this.fCost < vert.fCost) {
+            return -1;
+        } else return 0;
+    }
+
+    // TODO can use to force g() only or h() only
+//    @Override
+//    public int compareTo(Object o) {
+//
+//        MyVertex vert = (MyVertex) o;
+//
+//        if(this.gCost > vert.gCost) {
+//            return 1;
+//        } else if(this.gCost < vert.gCost) {
+//            return -1;
+//        } else return 0;
+//    }
 }

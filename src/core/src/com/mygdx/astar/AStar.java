@@ -2,6 +2,7 @@ package com.mygdx.astar;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -12,14 +13,13 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.DefaultUndirectedWeightedGraph;
 
 import java.util.ArrayList;
 
 public class AStar extends ApplicationAdapter {
 
-    static final boolean debugFlag = true; // TODO turn this off!
+    static final boolean debugFlag = false; // TODO turn this off!
+    static final double stepRate = 0.45;
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
@@ -78,7 +78,12 @@ public class AStar extends ApplicationAdapter {
     private PukoState state = PukoState.LOAD_MAP;
 
     // A* properties
-    private DefaultUndirectedWeightedGraph<MyVertex, DefaultEdge> graph = new DefaultUndirectedWeightedGraph<MyVertex, DefaultEdge>(DefaultEdge.class);
+    private ArrayList<MyVertex> solution = new ArrayList<MyVertex>();
+    private boolean runAlgo = false;
+
+    // Render properties
+    private int iteration = 0;
+    private double accumulator = 0;
 
 	@Override
 	public void create() {
@@ -95,8 +100,12 @@ public class AStar extends ApplicationAdapter {
 	}
 
 	// TODO level select
+    // TODO better user input
 	@Override
 	public void render() {
+
+	    // Enter key for running the algorithm
+        if(Gdx.input.isKeyPressed(Input.Keys.ENTER)) this.runAlgo = true;
 
 	    switch(this.state) {
 
@@ -118,21 +127,36 @@ public class AStar extends ApplicationAdapter {
             // Running A*
             case RUN_ALGO:
 
-                // TODO A*
-                MyVertex testVert = new MyVertex(this, this.boxes, this.player);
-                ArrayList<MyVertex> verts = this.calcPossibleMoves(testVert);
+                if(runAlgo) {
 
-                testVert.computeHeuristic();
+                    // Start timer
+                    long startTime = System.currentTimeMillis();
 
-                for(MyVertex vert : verts) {
-                    DebugPrint.getInstance().printVertex(vert);
+                    // Run A*
+                    AStarAlgo astar = new AStarAlgo(this);
+                    this.solution = astar.runAlgorithm();
+
+                    // Stop timer
+                    long stopTime = System.currentTimeMillis();
+
+                    long elapsedTime = stopTime - startTime;
+                    System.out.println("Execution time: " + elapsedTime / 1000.0f + "s");
+
+                    this.state = PukoState.RENDER;
                 }
-
-                this.state = PukoState.RENDER;
                 break;
 
             // Rendering solution
             case RENDER:
+
+                // Update accumulator to step through the solution
+                if(this.iteration != 0) {
+                    this.accumulator += Gdx.graphics.getDeltaTime();
+                    if(this.accumulator >= AStar.stepRate) {
+                        this.accumulator = this.accumulator - AStar.stepRate;
+                        this.iteration++;
+                    }
+                }
 
                 this.batch.setProjectionMatrix(camera.combined);
 
@@ -143,15 +167,50 @@ public class AStar extends ApplicationAdapter {
 
                 // Draw dynamic entities
                 this.batch.begin();
+
                 this.tiledHandler.drawEntities(this.goals, this.goalTex);
 
+                // Playback solution
+                int index = this.solution.size() - 1 - this.iteration;
+                if(this.iteration == 0) this.iteration++;
+
+                // Stop at goal state
+                if(index < 0) {
+                    this.iteration = this.solution.size() + 1;
+                    index = 0;
+                }
+
+                MyVertex currState = this.solution.get(index);
+
                 ArrayList<Vector2> player = new ArrayList<Vector2>();
-                player.add(this.player);
+                player.add(currState.getPlayer());
                 this.tiledHandler.drawEntities(player, this.playerTex);
-                this.tiledHandler.drawEntities(this.boxes, this.boxTex);
+                this.tiledHandler.drawEntities(currState.getBoxes(), this.boxTex);
                 this.batch.end();
 
                 break;
+        }
+
+        // Render static map while waiting for user input or A* termination
+        if(!this.state.equals(PukoState.RENDER)) {
+
+            this.batch.setProjectionMatrix(camera.combined);
+
+            Gdx.gl.glClearColor( 103/255f, 69/255f, 117/255f, 1 );
+            Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT );
+
+            this.tiledHandler.drawTileMap(this.currentMap, this.camera, this.batch);
+
+            // Draw dynamic entities
+            this.batch.begin();
+
+            this.tiledHandler.drawEntities(this.goals, this.goalTex);
+
+            ArrayList<Vector2> player = new ArrayList<Vector2>();
+            player.add(this.player);
+            this.tiledHandler.drawEntities(player, this.playerTex);
+            this.tiledHandler.drawEntities(this.boxes, this.boxTex);
+            this.batch.end();
         }
 	}
 	
@@ -178,9 +237,9 @@ public class AStar extends ApplicationAdapter {
 
 	    String filepath = mapPrefix + mapID + "." + mapFileType;
         this.tiledHandler.loadMap(filepath);
-        //this.tiledHandler.loadMap("LevelA.tmx");
+        //this.tiledHandler.loadMap("LevelB.tmx");
         this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
-        //this.currentMap = this.assetManager.get("LevelA.tmx");
+        //this.currentMap = this.assetManager.get("LevelB.tmx");
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);
@@ -201,7 +260,7 @@ public class AStar extends ApplicationAdapter {
      * @param vert the vertex to use as starting point
      * @return the list of vertices possible from the given starting vertex
      */
-    private ArrayList<MyVertex> calcPossibleMoves(MyVertex vert) {
+    public ArrayList<MyVertex> calcPossibleMoves(MyVertex vert) {
 
 	    ArrayList<MyVertex> moves = new ArrayList<MyVertex>();
 	    Vector2 pCoords = vert.getPlayer();
@@ -440,5 +499,19 @@ public class AStar extends ApplicationAdapter {
      */
     public ArrayList<Vector2> getGoals() {
         return this.goals;
+    }
+
+    /**
+     * @return the list of coordinates of each box for the current map state
+     */
+    public ArrayList<Vector2> getBoxes() {
+        return this.boxes;
+    }
+
+    /**
+     * @return the coordinates of the player for the current map state
+     */
+    public Vector2 getPlayer() {
+        return this.player;
     }
 }
