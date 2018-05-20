@@ -26,16 +26,22 @@ public class AStarAlgo {
     }
 
     /**
-     * Runs the A* algorithm using the current loaded map
+     * Runs the A* algorithm using the current loaded map.
+     *
+     * @param useTurns whether to consider turns in the heuristic cost
+     * @param turnCost the cost of boxes changing direction
      */
-    public ArrayList<MyVertex> runAlgorithm() {
+    public ArrayList<MyVertex> runAlgorithm(boolean useTurns, int turnCost) {
 
         ArrayList<Vector2> boxes = astar.getBoxes();
         Vector2 pCoords = astar.getPlayer();
 
         // Compute f() for the starting vertex
         MyVertex rootVertex = new MyVertex(this.astar, boxes, pCoords);
-        rootVertex.computeHeuristic2();
+
+        if(useTurns) rootVertex.computeHeuristicWithTurns(turnCost);
+        else rootVertex.computeHeuristic();
+
         rootVertex.setgCost(0);
         rootVertex.computeFCost();
 
@@ -52,7 +58,7 @@ public class AStarAlgo {
                 this.openList.remove(runVert);
                 break;
             }
-            this.doIterations(runVert);
+            this.doIterations(runVert, useTurns, turnCost);
         }
 
         System.out.println("Found path");
@@ -95,8 +101,10 @@ public class AStarAlgo {
      * the parent.
      *
      * @param currVert the vertex to consider for this iteration
+     * @param useTurns whether to consider turns in the heuristic cost
+     * @param turnCost the cost of boxes changing direction
      */
-    private void doIterations(MyVertex currVert) {
+    private void doIterations(MyVertex currVert, boolean useTurns, int turnCost) {
 
         // Update lists
         this.closedList.add(currVert);
@@ -115,7 +123,9 @@ public class AStarAlgo {
 
                 if(AStar.debugFlag) DebugPrint.getInstance().printVertex(vert);
 
-                vert.computeHeuristic2();
+                if(useTurns) vert.computeHeuristicWithTurns(turnCost);
+                else vert.computeHeuristic();
+
                 vert.setgCost(currVert.getgCost() + 1);
                 vert.computeFCost();
                 vert.setParent(currVert);

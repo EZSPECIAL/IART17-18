@@ -10,16 +10,22 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 public class AStar extends ApplicationAdapter {
 
     static final boolean debugFlag = false; // TODO turn this off!
-    private static final double stepRate = 0.45;
+    private static final String gameTitle = "Pukoban";
+    final DecimalFormat df = new DecimalFormat("#0.00");
+    private static final double stepIncrement = 0.05;
+    private static final double minStepRate = 0.05;
+    private static final double maxStepRate = 2.0;
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
@@ -80,13 +86,20 @@ public class AStar extends ApplicationAdapter {
     // A* properties
     private ArrayList<MyVertex> solution = new ArrayList<MyVertex>();
     private boolean runAlgo = false;
+    private boolean useTurns = false;
+    private int turnCost = 0;
 
     // Render properties
     private int iteration = 0;
     private double accumulator = 0;
+    private static double stepRate = 0.5; // seconds
 
 	@Override
 	public void create() {
+
+	    // Initial game title
+        String num = df.format(this.stepRate);
+        Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
 
 		this.batch = new SpriteBatch();
 		this.assetManager = new AssetManager();
@@ -100,12 +113,11 @@ public class AStar extends ApplicationAdapter {
 	}
 
 	// TODO level select
-    // TODO better user input
 	@Override
 	public void render() {
 
-	    // Enter key for running the algorithm
-        if(Gdx.input.isKeyPressed(Input.Keys.ENTER)) this.runAlgo = true;
+	    // Get user input
+        this.processKeyboard();
 
 	    switch(this.state) {
 
@@ -129,12 +141,15 @@ public class AStar extends ApplicationAdapter {
 
                 if(runAlgo) {
 
+                    if(this.useTurns) System.out.println("Starting A* with heuristic addition: box direction changes with cost: " + this.turnCost);
+                    else System.out.println("Starting A* with manhattan distance heuristic with obstacle consideration");
+
                     // Start timer
                     long startTime = System.currentTimeMillis();
 
                     // Run A*
                     AStarAlgo astar = new AStarAlgo(this);
-                    this.solution = astar.runAlgorithm();
+                    this.solution = astar.runAlgorithm(this.useTurns, this.turnCost);
 
                     // Stop timer
                     long stopTime = System.currentTimeMillis();
@@ -142,6 +157,9 @@ public class AStar extends ApplicationAdapter {
                     long elapsedTime = stopTime - startTime;
                     System.out.println("Execution time: " + elapsedTime / 1000.0f + "s");
 
+                    this.runAlgo = false;
+                    this.iteration = 0;
+                    this.accumulator = 0;
                     this.state = PukoState.RENDER;
                 }
                 break;
@@ -226,6 +244,60 @@ public class AStar extends ApplicationAdapter {
 	}
 
     /**
+     * Processes keyboard events and sets related flags.
+     */
+    private void processKeyboard() {
+
+	    if(!runAlgo) {
+
+            // Run A* with manhattan distance + obstacle consideration
+            if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
+                this.useTurns = false;
+                this.runAlgo = true;
+                this.turnCost = 0;
+                this.state = PukoState.RUN_ALGO;
+            }
+
+            // Run A* with manhattan distance + obstacle consideration + number of box turns
+            if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+                this.useTurns = true;
+                this.runAlgo = true;
+                this.turnCost = 1;
+                this.state = PukoState.RUN_ALGO;
+            }
+
+            // Run A* with manhattan distance + obstacle consideration + number of box turns * 2 (player has to make minimum of 2 moves to change box direction)
+            if (Gdx.input.isKeyPressed(Input.Keys.E)) {
+                this.useTurns = true;
+                this.runAlgo = true;
+                this.turnCost = 2;
+                this.state = PukoState.RUN_ALGO;
+            }
+        }
+
+        // Render control keys
+        if(this.state.equals(PukoState.RENDER)) {
+
+	        // Increase solution stepping speed
+            if(Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
+                this.stepRate += AStar.stepIncrement;
+                this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
+                String num = df.format(this.stepRate);
+                Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+            }
+
+            // Decrease solution stepping speed
+            if(Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
+                this.stepRate -= AStar.stepIncrement;
+                this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
+                String num = df.format(this.stepRate);
+                Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+            }
+        }
+
+    }
+
+    /**
      * Changes the current map by loading a new Tiled map. Sets the map size properties,
      * the camera and viewport according to the new map.
      *
@@ -236,10 +308,10 @@ public class AStar extends ApplicationAdapter {
 	    if(!this.currentMapName.equals("")) this.assetManager.unload(this.currentMapName);
 
 	    String filepath = mapPrefix + mapID + "." + mapFileType;
-        //this.tiledHandler.loadMap(filepath);
-        this.tiledHandler.loadMap("LevelA.tmx");
-        //this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
-        this.currentMap = this.assetManager.get("LevelA.tmx");
+        this.tiledHandler.loadMap(filepath);
+        //this.tiledHandler.loadMap("LevelB.tmx");
+        this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
+        //this.currentMap = this.assetManager.get("LevelB.tmx");
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);

@@ -113,69 +113,14 @@ public class MyVertex implements Comparable {
         this.parent = parent;
     }
 
-    // TODO doc
-    public void computeHeuristic2() {
-
-        //System.out.println("started"); // TODO remove;
-
-        int result = 0;
-
-        // For each goal find the distance to each box
-        for(Vector2 goal : this.astar.getGoals()) {
-
-            // Reset expansion state variables
-            ArrayList<Expansion> expansions = new ArrayList<Expansion>();
-            this.expansionCoords = new HashSet<Vector2>();
-            this.expansionList = new HashSet<Expansion>();
-            this.currentPass = new HashSet<Expansion>();
-            this.nextPass = new HashSet<Expansion>();
-            this.currentPass.add(new Expansion(goal.cpy(), 0));
-
-            //System.out.println("Starting"); // TODO remove
-
-           // System.out.println("goal: " + goal.x + "," + goal.y); // TODO remove
-
-            int bestResult = -1;
-
-            // Find the distance to each box for the current goal
-            for(Vector2 box : this.boxes) {
-
-                this.expansionCoords = new HashSet<Vector2>();
-                this.expansionList = new HashSet<Expansion>();
-                this.currentPass = new HashSet<Expansion>();
-                this.nextPass = new HashSet<Expansion>();
-                this.currentPass.add(new Expansion(goal.cpy(), 0));
-
-               // System.out.println("box: " + box.x + "," + box.y); // TODO remove
-                Expansion exp = this.doExpansionPasses2(box);
-
-                ArrayList<Expansion> path = this.backtrackPath(exp);
-
-                int turns = this.countTurns(path);
-                if(bestResult == -1) bestResult = exp.getDist() + turns * 2; // TODO static
-                else if(exp.getDist() + turns * 2 < bestResult) bestResult = exp.getDist() + turns * 2;
-            }
-
-           // System.out.println("boxes"); // TODO remove
-
-            // TODO remove
-//            for(Expansion exp : this.expansionList) {
-//                System.out.println("coords: " + exp.getCoords().x + "," + exp.getCoords().y + " dist: " + exp.getDist());
-//            }
-
-            //System.out.println("int result: " + bestResult); // TODO remove
-            result += bestResult;
-        }
-
-        if(AStar.debugFlag) DebugPrint.getInstance().printInt("h()", result);
-        //DebugPrint.getInstance().printInt("h()", result); // TODO remove
-        this.heuristicCost = result;
-
-       // System.out.println("finished"); // TODO removed;
-    }
-
-    // TODO doc
-    private Expansion doExpansionPasses2(Vector2 box) {
+    /**
+     * Expands outwards from the current pass expansions and checks for boxes in the path to find
+     * the shortest distance to a box from a specific goal. Can specify a box to find the distance
+     * to it, instead of finding the closest box to a goal.
+     *
+     * @param box the box to use, can be null if only interested in knowing the closest one
+     */
+    private Expansion doExpansionPasses(Vector2 box) {
 
         Expansion expansion = new Expansion(new Vector2(0, 0), 0);
 
@@ -190,13 +135,22 @@ public class MyVertex implements Comparable {
 
                 // Add expansion coords to already explored if unique
                 this.expansionCoords.add(goal.cpy());
-                this.expansionList.add(exp);
+                if(box != null) this.expansionList.add(exp);
 
-                // If current expansion overlaps a box stop
-                if(box.equals(goal)) {
-                    expansion = new Expansion(new Vector2(goal.x, goal.y), exp.getDist());
-                    isFinished = true;
-                    break;
+                // If current expansion overlaps a box, stop
+                if(box == null) {
+                    if(this.boxes.contains(goal)) {
+                        expansion = new Expansion(new Vector2(goal.x, goal.y), exp.getDist());
+                        isFinished = true;
+                        break;
+                    }
+                // If current expansion found the specified box, stop
+                } else {
+                    if (box.equals(goal)) {
+                        expansion = new Expansion(new Vector2(goal.x, goal.y), exp.getDist());
+                        isFinished = true;
+                        break;
+                    }
                 }
 
                 Vector2 moveRight = new Vector2(goal.x + 1, goal.y);
@@ -238,7 +192,13 @@ public class MyVertex implements Comparable {
         return expansion;
     }
 
-    // TODO doc
+    /**
+     * Backtracks from a box to a goal by using all the expanded states
+     * from the previous round.
+     *
+     * @param initExp the expansion where the box was found
+     * @return the path from the box to the goal
+     */
     private ArrayList<Expansion> backtrackPath(Expansion initExp) {
 
         ArrayList<Expansion> path = new ArrayList<Expansion>();
@@ -253,8 +213,6 @@ public class MyVertex implements Comparable {
         while(!isFinished) {
             for (Expansion exp : this.expansionList) {
                 if(this.isAdj(exp.getCoords(), adjCoords) && exp.getDist() == distCheck) {
-
-                    //System.out.println("added: " + exp.getCoords().x + "," + exp.getCoords().y); // TODO remove
 
                     path.add(exp);
                     adjCoords = exp.getCoords().cpy();
@@ -271,7 +229,13 @@ public class MyVertex implements Comparable {
         return path;
     }
 
-    // TODO doc
+    /**
+     * Counts the number of turns needed to go from a specific goal
+     * to a specific box.
+     *
+     * @param path the path from a specific goal to a specific box
+     * @return the number of turns to get from the goal to the box
+     */
     private int countTurns(ArrayList<Expansion> path) {
 
         int firstDx, firstDy, secondDx, secondDy;
@@ -299,14 +263,16 @@ public class MyVertex implements Comparable {
             else if(firstDy != 0 && secondDx != 0) turnCount++;
         }
 
-//        for(Expansion exp : path) {
-//            System.out.println("(" + exp.getCoords().x + "," + exp.getCoords().y + ")");
-//        }
-//        System.out.println("turn count: " + turnCount);
         return turnCount;
     }
 
-    // TODO doc
+    /**
+     * Checks if 2 vectors are adjacent using 4 directions.
+     *
+     * @param vec1 the first vector
+     * @param vec2 the second vector
+     * @return whether the vectors are adjacent using 4 directions
+     */
     private boolean isAdj(Vector2 vec1, Vector2 vec2) {
 
         Vector2 rightVec = new Vector2(vec2.x + 1, vec2.y);
@@ -317,7 +283,6 @@ public class MyVertex implements Comparable {
         return (vec1.equals(rightVec) || vec1.equals(leftVec) || vec1.equals(upVec) || vec1.equals(downVec));
     }
 
-    // TODO add turns / edit javadoc
     /**
      * Computes the heuristic cost for this vertex and stores it.
      * The heuristic is the sum of the shortest distance to a box for each goal.
@@ -335,7 +300,7 @@ public class MyVertex implements Comparable {
             this.nextPass = new HashSet<Expansion>();
             this.currentPass.add(new Expansion(goal.cpy(), 0));
 
-            this.doExpansionPasses();
+            this.doExpansionPasses(null);
 
             result += this.finalExpansion.getDist();
             this.finalExpansion = new Expansion(new Vector2(0, 0), 0);
@@ -346,65 +311,48 @@ public class MyVertex implements Comparable {
     }
 
     /**
-     * Expands outwards from the current pass expansions and checks for boxes in the path to find
-     * the shortest distance to a box from a specific goal.
+     * Computes the heuristic cost for this vertex and stores it.
+     * The heuristic is the sum of the shortest distance to a box for each goal considering
+     * the number of turns the box has to make to reach the goal. The shortest path
+     * over all the box/goal combinations is the one used.
+     *
+     * @param turnValue how much each turn should weigh in the heuristic cost
      */
-    private void doExpansionPasses() {
+    public void computeHeuristicWithTurns(int turnValue) {
 
-        boolean isFinished = false;
-        while(!isFinished) {
+        int result = 0;
 
-            // Cycle through the current expansions and check for a box, if not found add all the possible expansions to the next pass
-            for(Expansion exp : this.currentPass) {
+        // For each goal find the distance to each box
+        for(Vector2 goal : this.astar.getGoals()) {
 
-                ArrayList<Vector2> goalExpansion = new ArrayList<Vector2>();
-                Vector2 goal = exp.getCoords();
+            int bestResult = -1;
 
-                // Add expansion coords to already explored if unique
-                this.expansionCoords.add(goal.cpy());
+            // Find the distance to each box for the current goal
+            for(Vector2 box : this.boxes) {
 
-                // If current expansion overlaps a box stop
-                if(this.boxes.contains(goal)) {
-                    this.finalExpansion = new Expansion(new Vector2(goal.x, goal.y), exp.getDist());
-                    isFinished = true;
-                    break;
-                }
-
-                Vector2 moveRight = new Vector2(goal.x + 1, goal.y);
-                Vector2 moveLeft = new Vector2(goal.x - 1, goal.y);
-                Vector2 moveUp = new Vector2(goal.x, goal.y + 1);
-                Vector2 moveDown = new Vector2(goal.x, goal.y - 1);
-
-                // Add each direction only if they're viable and not already explored
-                if(!this.astar.collisionCheck(moveRight)) {
-                    if(!this.expansionCoords.contains(moveRight)) goalExpansion.add(moveRight);
-                }
-                if(!this.astar.collisionCheck(moveLeft)) {
-                    if(!this.expansionCoords.contains(moveLeft)) goalExpansion.add(moveLeft);
-                }
-                if(!this.astar.collisionCheck(moveUp)) {
-                    if(!this.expansionCoords.contains(moveUp)) goalExpansion.add(moveUp);
-                }
-                if(!this.astar.collisionCheck(moveDown)) {
-                    if(!this.expansionCoords.contains(moveDown)) goalExpansion.add(moveDown);
-                }
-
-                // Add all possible expansions from this cell to the next pass
-                for (Vector2 vec : goalExpansion) {
-                    this.nextPass.add(new Expansion(vec.cpy(), exp.getDist() + 1));
-                }
-            }
-
-            if(!isFinished) {
-
-                // Copy next pass to current pass and reset next pass
+                this.expansionCoords = new HashSet<Vector2>();
+                this.expansionList = new HashSet<Expansion>();
                 this.currentPass = new HashSet<Expansion>();
-                for (Expansion exp : this.nextPass) {
-                    this.currentPass.add(new Expansion(exp.getCoords(), exp.getDist()));
-                }
                 this.nextPass = new HashSet<Expansion>();
+                this.currentPass.add(new Expansion(goal.cpy(), 0));
+
+                // Find the path to this box
+                Expansion exp = this.doExpansionPasses(box);
+                ArrayList<Expansion> path = this.backtrackPath(exp);
+
+                // Count the number of direction changes
+                int turns = this.countTurns(path);
+
+                // Update best path
+                if(bestResult == -1) bestResult = exp.getDist() + turns * turnValue;
+                else if(exp.getDist() + turns * 2 < bestResult) bestResult = exp.getDist() + turns * turnValue;
             }
+
+            result += bestResult;
         }
+
+        if(AStar.debugFlag) DebugPrint.getInstance().printInt("h()", result);
+        this.heuristicCost = result;
     }
 
     /**

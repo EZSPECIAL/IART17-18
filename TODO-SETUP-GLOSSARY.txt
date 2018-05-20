@@ -7,14 +7,21 @@ Edit configuration under Run -> Edit configuration to set the working directory 
 
 TODO
 
-  - compute heuristic with turns
   - changing map button
   - pause button?
-  - control speed button?
   - g() only
   - h() only
-  - fibonacci heap
+  - skip render
+  - report
 
+KEYS
+
+  Q - run A*
+  W - run A* with box turns cost 1
+  E - run A* with box turns cost 2
+  + - increment solution render speed
+  - - decrement solution render speed
+  
 GLOSSARY
 
 map             the Tiled map to use
