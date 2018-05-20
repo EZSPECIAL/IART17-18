@@ -32,4 +32,24 @@ public class Expansion {
     public int getDist() {
         return this.dist;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+
+        if(obj.getClass().getPackage().equals(this.getClass().getPackage())
+                && obj.getClass().getName().equals(this.getClass().getName())) {
+
+            Expansion exp = (Expansion) obj;
+
+            if(this.coords.equals(exp.coords)) return true;
+            else return false;
+        }
+
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (this.coords.x + this.coords.y);
+    }
 }

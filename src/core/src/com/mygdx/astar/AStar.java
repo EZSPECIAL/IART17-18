@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class AStar extends ApplicationAdapter {
 
     static final boolean debugFlag = false; // TODO turn this off!
-    static final double stepRate = 0.45;
+    private static final double stepRate = 0.45;
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
@@ -236,10 +236,10 @@ public class AStar extends ApplicationAdapter {
 	    if(!this.currentMapName.equals("")) this.assetManager.unload(this.currentMapName);
 
 	    String filepath = mapPrefix + mapID + "." + mapFileType;
-        this.tiledHandler.loadMap(filepath);
-        //this.tiledHandler.loadMap("LevelB.tmx");
-        this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
-        //this.currentMap = this.assetManager.get("LevelB.tmx");
+        //this.tiledHandler.loadMap(filepath);
+        this.tiledHandler.loadMap("LevelA.tmx");
+        //this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
+        this.currentMap = this.assetManager.get("LevelA.tmx");
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);

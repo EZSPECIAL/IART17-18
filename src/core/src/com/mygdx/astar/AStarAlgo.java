@@ -35,7 +35,7 @@ public class AStarAlgo {
 
         // Compute f() for the starting vertex
         MyVertex rootVertex = new MyVertex(this.astar, boxes, pCoords);
-        rootVertex.computeHeuristic();
+        rootVertex.computeHeuristic2();
         rootVertex.setgCost(0);
         rootVertex.computeFCost();
 
@@ -115,7 +115,7 @@ public class AStarAlgo {
 
                 if(AStar.debugFlag) DebugPrint.getInstance().printVertex(vert);
 
-                vert.computeHeuristic();
+                vert.computeHeuristic2();
                 vert.setgCost(currVert.getgCost() + 1);
                 vert.computeFCost();
                 vert.setParent(currVert);
