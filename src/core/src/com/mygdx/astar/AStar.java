@@ -21,14 +21,12 @@ import java.util.ArrayList;
 public class AStar extends ApplicationAdapter {
 
     static final boolean debugFlag = false;
-    private static final String gameTitle = "Pukoban";
     final DecimalFormat df = new DecimalFormat("#0.00");
-    private static final double keyDelay = 1.0;
     private static final double stepIncrement = 0.05;
     private static final double minStepRate = 0.05;
     private static final double maxStepRate = 2.0;
     private static final int minLevel = 1;
-    private static final int maxLevel = 20;
+    private static final int maxLevel = 10;
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
@@ -85,7 +83,6 @@ public class AStar extends ApplicationAdapter {
 
     // State properties
     private PukoState state = PukoState.LOAD_MAP;
-    private double keyTimeout = 0;
     private int currentMapI = 1;
 
     // A* properties
@@ -105,7 +102,7 @@ public class AStar extends ApplicationAdapter {
 
 	    // Initial game title
         String num = df.format(this.stepRate);
-        Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+        Gdx.graphics.setTitle(mapPrefix + this.currentMapI + " " + num);
 
 		this.batch = new SpriteBatch();
 		this.assetManager = new AssetManager();
@@ -274,8 +271,11 @@ public class AStar extends ApplicationAdapter {
 
                 if(previousMapI != this.currentMapI) {
 
-                    if(this.changeMap(this.currentMapI)) this.state = PukoState.LOAD_MAP;
-                    else this.currentMapI = previousMapI;
+                    if(this.changeMap(this.currentMapI)) {
+                        String num = df.format(this.stepRate);
+                        Gdx.graphics.setTitle(mapPrefix + this.currentMapI + " " + num);
+                        this.state = PukoState.LOAD_MAP;
+                    } else this.currentMapI = previousMapI;
                 }
             }
 
@@ -288,8 +288,11 @@ public class AStar extends ApplicationAdapter {
                 this.currentMapI = MathUtils.clamp(this.currentMapI, AStar.minLevel, AStar.maxLevel);
 
                 if(previousMapI != this.currentMapI) {
-                    if(this.changeMap(this.currentMapI)) this.state = PukoState.LOAD_MAP;
-                    else this.currentMapI = previousMapI;
+                    if(this.changeMap(this.currentMapI)) {
+                        String num = df.format(this.stepRate);
+                        Gdx.graphics.setTitle(mapPrefix + this.currentMapI + " " + num);
+                        this.state = PukoState.LOAD_MAP;
+                    } else this.currentMapI = previousMapI;
                 }
             }
         }
@@ -348,7 +351,7 @@ public class AStar extends ApplicationAdapter {
             this.stepRate += AStar.stepIncrement;
             this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
             String num = df.format(this.stepRate);
-            Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+            Gdx.graphics.setTitle(mapPrefix + this.currentMapI + " " + num);
         }
 
         // Decrease solution stepping speed
@@ -356,7 +359,7 @@ public class AStar extends ApplicationAdapter {
             this.stepRate -= AStar.stepIncrement;
             this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
             String num = df.format(this.stepRate);
-            Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+            Gdx.graphics.setTitle(mapPrefix + this.currentMapI + " " + num);
         }
     }
 

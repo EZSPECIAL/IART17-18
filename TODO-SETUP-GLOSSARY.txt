@@ -3,17 +3,12 @@ Intellij IDEA 2018.1.3 (Community)
 To import to Intellij IDEA: File -> Open -> build.gradle -> click OK
 Ctrl+Shift+Alt+S to setup JDK for the project
 Right click DesktopLauncher and select run
-Edit configuration under Run -> Edit configuration to set the working directory for the DesktopLauncher configuration. It should point to core/assets
-
-TODO
-
-  - create levels
-  - report
+Edit configuration under Run -> Edit configuration to set the working directory for the DesktopLauncher configuration. It should point to "core/assets"
 
 KEYS
 
-  UpArrow   - increment level (up to ??)
-  DownArrow - decrement level (up to ??)
+  UpArrow   - increment level (up to 10)
+  DownArrow - decrement level (up to 10)
   Q         - run A*
   W         - run A* with box turns cost 1
   E         - run A* with box turns cost 2
@@ -21,7 +16,7 @@ KEYS
   T         - run greedy search
   +         - increment solution render speed
   -         - decrement solution render speed
-  
+
 GLOSSARY
 
 map             the Tiled map to use
