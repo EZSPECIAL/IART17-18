@@ -347,7 +347,7 @@ public class AStar extends ApplicationAdapter {
         }
 
         // Increase solution stepping speed
-        if(Gdx.input.isKeyJustPressed(Input.Keys.PLUS)) {
+        if(Gdx.input.isKeyJustPressed(Input.Keys.MINUS)) {
             this.stepRate += AStar.stepIncrement;
             this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
             String num = df.format(this.stepRate);
@@ -355,7 +355,7 @@ public class AStar extends ApplicationAdapter {
         }
 
         // Decrease solution stepping speed
-        if(Gdx.input.isKeyJustPressed(Input.Keys.MINUS)) {
+        if(Gdx.input.isKeyJustPressed(Input.Keys.PLUS)) {
             this.stepRate -= AStar.stepIncrement;
             this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
             String num = df.format(this.stepRate);
@@ -368,6 +368,7 @@ public class AStar extends ApplicationAdapter {
      * the camera and viewport according to the new map.
      *
      * @param mapID the numeric map ID to use
+     * @return whether the map change was possible
      */
     private boolean changeMap(int mapID) {
 

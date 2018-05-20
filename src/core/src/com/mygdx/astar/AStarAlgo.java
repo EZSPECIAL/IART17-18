@@ -26,11 +26,13 @@ public class AStarAlgo {
     }
 
     /**
-     * Runs the A* algorithm using the current loaded map.
+     * Runs the A* algorithm using the current loaded map. Returns the
+     * path taken to reach the solution.
      *
      * @param method the method to use for calculating f()
      * @param useTurns whether to consider turns in the heuristic cost
      * @param turnCost the cost of boxes changing direction
+     * @return the path taken to reach the solution
      */
     public ArrayList<MyVertex> runAlgorithm(MyVertex.FCostMethod method, boolean useTurns, int turnCost) {
 

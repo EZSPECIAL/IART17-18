@@ -32,6 +32,7 @@ public class MyVertex implements Comparable {
      * Constructs a MyVertex object which stores the Pukoban board state by
      * copying all the box and player coordinates received.
      *
+     * @param astar the main class instance
      * @param boxes the the list of box coordinates
      * @param pCoords the player coordinates
      */
@@ -121,6 +122,7 @@ public class MyVertex implements Comparable {
      * to it, instead of finding the closest box to a goal.
      *
      * @param box the box to use, can be null if only interested in knowing the closest one
+     * @return the distance to the closest box or to the specified box
      */
     private Expansion doExpansionPasses(Vector2 box) {
 
