@@ -7,20 +7,20 @@ Edit configuration under Run -> Edit configuration to set the working directory 
 
 TODO
 
-  - changing map button
-  - pause button?
-  - g() only
-  - h() only
-  - skip render
+  - create levels
   - report
 
 KEYS
 
-  Q - run A*
-  W - run A* with box turns cost 1
-  E - run A* with box turns cost 2
-  + - increment solution render speed
-  - - decrement solution render speed
+  UpArrow   - increment level (up to ??)
+  DownArrow - decrement level (up to ??)
+  Q         - run A*
+  W         - run A* with box turns cost 1
+  E         - run A* with box turns cost 2
+  R         - run uniform cost search
+  T         - run greedy search
+  +         - increment solution render speed
+  -         - decrement solution render speed
   
 GLOSSARY
 

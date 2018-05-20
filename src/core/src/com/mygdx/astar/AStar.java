@@ -20,12 +20,15 @@ import java.util.ArrayList;
 
 public class AStar extends ApplicationAdapter {
 
-    static final boolean debugFlag = false; // TODO turn this off!
+    static final boolean debugFlag = false;
     private static final String gameTitle = "Pukoban";
     final DecimalFormat df = new DecimalFormat("#0.00");
+    private static final double keyDelay = 1.0;
     private static final double stepIncrement = 0.05;
     private static final double minStepRate = 0.05;
     private static final double maxStepRate = 2.0;
+    private static final int minLevel = 1;
+    private static final int maxLevel = 20;
 
     // Enumerators
     private enum PukoState {LOAD_MAP, RUN_ALGO, RENDER}
@@ -82,12 +85,15 @@ public class AStar extends ApplicationAdapter {
 
     // State properties
     private PukoState state = PukoState.LOAD_MAP;
+    private double keyTimeout = 0;
+    private int currentMapI = 1;
 
     // A* properties
     private ArrayList<MyVertex> solution = new ArrayList<MyVertex>();
     private boolean runAlgo = false;
     private boolean useTurns = false;
     private int turnCost = 0;
+    private MyVertex.FCostMethod algoMethod = MyVertex.FCostMethod.BOTH;
 
     // Render properties
     private int iteration = 0;
@@ -106,13 +112,12 @@ public class AStar extends ApplicationAdapter {
 		this.tiledHandler = new TiledHandler(this);
 
 		this.loadTextures();
-        this.changeMap(1);
+        this.changeMap(currentMapI);
 
         camera = createCamera();
         viewport = new FitViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), camera);
 	}
 
-	// TODO level select
 	@Override
 	public void render() {
 
@@ -141,15 +146,24 @@ public class AStar extends ApplicationAdapter {
 
                 if(runAlgo) {
 
-                    if(this.useTurns) System.out.println("Starting A* with heuristic addition: box direction changes with cost: " + this.turnCost);
-                    else System.out.println("Starting A* with manhattan distance heuristic with obstacle consideration");
+                    // Inform which algorithm is running
+                    if(this.algoMethod.equals(MyVertex.FCostMethod.BOTH)) {
+                        if (this.useTurns)
+                            System.out.println("Starting A* with heuristic addition: box direction changes with cost: " + this.turnCost);
+                        else
+                            System.out.println("Starting A* with manhattan distance heuristic with obstacle consideration");
+                    } else if(this.algoMethod.equals(MyVertex.FCostMethod.G_ONLY)) {
+                        System.out.println("Starting uniform cost search");
+                    } else if(this.algoMethod.equals(MyVertex.FCostMethod.H_ONLY)) {
+                        System.out.println("Starting greedy search with manhattan distance with obstacle consideration");
+                    }
 
                     // Start timer
                     long startTime = System.currentTimeMillis();
 
                     // Run A*
                     AStarAlgo astar = new AStarAlgo(this);
-                    this.solution = astar.runAlgorithm(this.useTurns, this.turnCost);
+                    this.solution = astar.runAlgorithm(this.algoMethod, this.useTurns, this.turnCost);
 
                     // Stop timer
                     long stopTime = System.currentTimeMillis();
@@ -248,53 +262,102 @@ public class AStar extends ApplicationAdapter {
      */
     private void processKeyboard() {
 
+        if(this.state.equals(PukoState.RUN_ALGO) || this.state.equals(PukoState.RENDER) && !runAlgo) {
+
+            // Increase level
+            if(Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+
+                int previousMapI = this.currentMapI;
+
+                this.currentMapI++;
+                this.currentMapI = MathUtils.clamp(this.currentMapI, AStar.minLevel, AStar.maxLevel);
+
+                if(previousMapI != this.currentMapI) {
+
+                    if(this.changeMap(this.currentMapI)) this.state = PukoState.LOAD_MAP;
+                    else this.currentMapI = previousMapI;
+                }
+            }
+
+            // Decrease level
+            if(Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+
+                int previousMapI = this.currentMapI;
+
+                this.currentMapI--;
+                this.currentMapI = MathUtils.clamp(this.currentMapI, AStar.minLevel, AStar.maxLevel);
+
+                if(previousMapI != this.currentMapI) {
+                    if(this.changeMap(this.currentMapI)) this.state = PukoState.LOAD_MAP;
+                    else this.currentMapI = previousMapI;
+                }
+            }
+        }
+
+        // Waiting for input to run algorithm
 	    if(!runAlgo) {
 
             // Run A* with manhattan distance + obstacle consideration
-            if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
                 this.useTurns = false;
                 this.runAlgo = true;
                 this.turnCost = 0;
+                this.algoMethod = MyVertex.FCostMethod.BOTH;
                 this.state = PukoState.RUN_ALGO;
             }
 
             // Run A* with manhattan distance + obstacle consideration + number of box turns
-            if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.W)) {
                 this.useTurns = true;
                 this.runAlgo = true;
                 this.turnCost = 1;
+                this.algoMethod = MyVertex.FCostMethod.BOTH;
                 this.state = PukoState.RUN_ALGO;
             }
 
             // Run A* with manhattan distance + obstacle consideration + number of box turns * 2 (player has to make minimum of 2 moves to change box direction)
-            if (Gdx.input.isKeyPressed(Input.Keys.E)) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
                 this.useTurns = true;
                 this.runAlgo = true;
                 this.turnCost = 2;
+                this.algoMethod = MyVertex.FCostMethod.BOTH;
+                this.state = PukoState.RUN_ALGO;
+            }
+
+            // Run uniform cost search
+            if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+                this.useTurns = false;
+                this.runAlgo = true;
+                this.turnCost = 0;
+                this.algoMethod = MyVertex.FCostMethod.G_ONLY;
+                this.state = PukoState.RUN_ALGO;
+            }
+
+            // Run greedy search
+            if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+                this.useTurns = false;
+                this.runAlgo = true;
+                this.turnCost = 0;
+                this.algoMethod = MyVertex.FCostMethod.H_ONLY;
                 this.state = PukoState.RUN_ALGO;
             }
         }
 
-        // Render control keys
-        if(this.state.equals(PukoState.RENDER)) {
-
-	        // Increase solution stepping speed
-            if(Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
-                this.stepRate += AStar.stepIncrement;
-                this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
-                String num = df.format(this.stepRate);
-                Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
-            }
-
-            // Decrease solution stepping speed
-            if(Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
-                this.stepRate -= AStar.stepIncrement;
-                this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
-                String num = df.format(this.stepRate);
-                Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
-            }
+        // Increase solution stepping speed
+        if(Gdx.input.isKeyJustPressed(Input.Keys.PLUS)) {
+            this.stepRate += AStar.stepIncrement;
+            this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
+            String num = df.format(this.stepRate);
+            Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
         }
 
+        // Decrease solution stepping speed
+        if(Gdx.input.isKeyJustPressed(Input.Keys.MINUS)) {
+            this.stepRate -= AStar.stepIncrement;
+            this.stepRate = MathUtils.clamp(this.stepRate, AStar.minStepRate, AStar.maxStepRate);
+            String num = df.format(this.stepRate);
+            Gdx.graphics.setTitle(AStar.gameTitle + " " + num);
+        }
     }
 
     /**
@@ -303,15 +366,19 @@ public class AStar extends ApplicationAdapter {
      *
      * @param mapID the numeric map ID to use
      */
-    private void changeMap(int mapID) {
+    private boolean changeMap(int mapID) {
+
+        System.out.println("Changing to map ID: " + mapID);
+
+        String filepath = mapPrefix + mapID + "." + mapFileType;
+        if(!this.tiledHandler.loadMap(filepath)) {
+            System.out.println(filepath + " doesn't exist!");
+            return false;
+        }
 
 	    if(!this.currentMapName.equals("")) this.assetManager.unload(this.currentMapName);
 
-	    String filepath = mapPrefix + mapID + "." + mapFileType;
-        this.tiledHandler.loadMap(filepath);
-        //this.tiledHandler.loadMap("LevelB.tmx");
-        this.currentMap = this.assetManager.get(filepath); // TODO remove hardcoded debug level
-        //this.currentMap = this.assetManager.get("LevelB.tmx");
+        this.currentMap = this.assetManager.get(filepath);
         TiledMapTileLayer layer = (TiledMapTileLayer) this.currentMap.getLayers().get(baseLayer);
 
         Gdx.graphics.setWindowedMode(layer.getWidth() * tileSize, layer.getHeight() * tileSize);
@@ -324,6 +391,8 @@ public class AStar extends ApplicationAdapter {
 
         this.camera = createCamera();
         viewport = new FitViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), camera);
+
+        return true;
     }
 
     /**

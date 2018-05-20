@@ -1,6 +1,8 @@
 package com.mygdx.astar;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -9,6 +11,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import java.util.ArrayList;
 
@@ -30,13 +33,19 @@ public class TiledHandler {
      * Loads a Tiled (TMX) map by using the built-in loader.
      *
      * @param filepath the file path to use
+     * @return whether the map exists
      */
-    public void loadMap(String filepath) {
+    public boolean loadMap(String filepath) {
 
         astar.getAssetManager().setLoader(TiledMap.class, new TmxMapLoader(new InternalFileHandleResolver()));
 
+        // Check map exists
+        FileHandle handle = Gdx.files.internal(filepath);
+        if(!handle.exists()) return false;
+
         this.astar.getAssetManager().load(filepath, TiledMap.class);
         this.astar.getAssetManager().finishLoading();
+        return true;
     }
 
     /**

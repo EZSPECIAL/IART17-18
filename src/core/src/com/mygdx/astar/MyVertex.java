@@ -7,6 +7,8 @@ import java.util.HashSet;
 
 public class MyVertex implements Comparable {
 
+    public enum FCostMethod {BOTH, G_ONLY, H_ONLY};
+
     // Vertex Pukoban state
     private ArrayList<Vector2> boxes;
     private Vector2 player;
@@ -363,11 +365,28 @@ public class MyVertex implements Comparable {
     }
 
     /**
-     * Computes f() = g() + h().
+     * Computes f() using the specified method.
      *
+     * @param method the method to use for calculating f()
      * @return the f() cost
      */
-    public int computeFCost() {
+    public int computeFCost(FCostMethod method) {
+
+        switch(method) {
+
+            case BOTH:
+                this.fCost = this.gCost + this.heuristicCost;
+                return this.fCost;
+
+            case G_ONLY:
+                this.fCost = this.gCost;
+                return this.gCost;
+
+            case H_ONLY:
+                this.fCost = this.heuristicCost;
+                return this.fCost;
+        }
+
         this.fCost = this.gCost + this.heuristicCost;
         return this.fCost;
     }
@@ -419,17 +438,4 @@ public class MyVertex implements Comparable {
             return -1;
         } else return 0;
     }
-
-    // TODO can use to force g() only or h() only
-//    @Override
-//    public int compareTo(Object o) {
-//
-//        MyVertex vert = (MyVertex) o;
-//
-//        if(this.gCost > vert.gCost) {
-//            return 1;
-//        } else if(this.gCost < vert.gCost) {
-//            return -1;
-//        } else return 0;
-//    }
 }

@@ -28,10 +28,11 @@ public class AStarAlgo {
     /**
      * Runs the A* algorithm using the current loaded map.
      *
+     * @param method the method to use for calculating f()
      * @param useTurns whether to consider turns in the heuristic cost
      * @param turnCost the cost of boxes changing direction
      */
-    public ArrayList<MyVertex> runAlgorithm(boolean useTurns, int turnCost) {
+    public ArrayList<MyVertex> runAlgorithm(MyVertex.FCostMethod method, boolean useTurns, int turnCost) {
 
         ArrayList<Vector2> boxes = astar.getBoxes();
         Vector2 pCoords = astar.getPlayer();
@@ -39,11 +40,14 @@ public class AStarAlgo {
         // Compute f() for the starting vertex
         MyVertex rootVertex = new MyVertex(this.astar, boxes, pCoords);
 
-        if(useTurns) rootVertex.computeHeuristicWithTurns(turnCost);
-        else rootVertex.computeHeuristic();
+        // Compute h() cost if not running uniform cost search
+        if(!method.equals(MyVertex.FCostMethod.G_ONLY)) {
+            if (useTurns) rootVertex.computeHeuristicWithTurns(turnCost);
+            else rootVertex.computeHeuristic();
+        }
 
         rootVertex.setgCost(0);
-        rootVertex.computeFCost();
+        rootVertex.computeFCost(method);
 
         // Add root vertex and run the iterations
         this.openList.add(rootVertex);
@@ -58,7 +62,7 @@ public class AStarAlgo {
                 this.openList.remove(runVert);
                 break;
             }
-            this.doIterations(runVert, useTurns, turnCost);
+            this.doIterations(method, runVert, useTurns, turnCost);
         }
 
         System.out.println("Found path");
@@ -100,11 +104,12 @@ public class AStarAlgo {
      * closed list, f() gets updated if the current g() is better through this path, also updating
      * the parent.
      *
+     * @param method the method to use for calculating f()
      * @param currVert the vertex to consider for this iteration
      * @param useTurns whether to consider turns in the heuristic cost
      * @param turnCost the cost of boxes changing direction
      */
-    private void doIterations(MyVertex currVert, boolean useTurns, int turnCost) {
+    private void doIterations(MyVertex.FCostMethod method, MyVertex currVert, boolean useTurns, int turnCost) {
 
         // Update lists
         this.closedList.add(currVert);
@@ -123,11 +128,14 @@ public class AStarAlgo {
 
                 if(AStar.debugFlag) DebugPrint.getInstance().printVertex(vert);
 
-                if(useTurns) vert.computeHeuristicWithTurns(turnCost);
-                else vert.computeHeuristic();
+                // Compute h() cost if not running uniform cost search
+                if(!method.equals(MyVertex.FCostMethod.G_ONLY)) {
+                    if (useTurns) vert.computeHeuristicWithTurns(turnCost);
+                    else vert.computeHeuristic();
+                }
 
                 vert.setgCost(currVert.getgCost() + 1);
-                vert.computeFCost();
+                vert.computeFCost(method);
                 vert.setParent(currVert);
 
                 this.openList.add(vert);
